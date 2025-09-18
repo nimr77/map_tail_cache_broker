@@ -1,1 +1,5 @@
-package mapbroker
+package main
+
+func main() {
+
+}

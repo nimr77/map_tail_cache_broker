@@ -1,5 +1,7 @@
 package map_core
 
+import "fmt"
+
 type ThemeMode int
 
 const (
@@ -17,4 +19,12 @@ type MapRequest struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 	Z float64 `json:"z"`
+}
+
+func (m MapRequest) GetMapTileFileName() string {
+	return fmt.Sprintf("%s_%d_%d_%d.png", m.Provider, int(m.X), int(m.Y), int(m.Z))
+}
+
+func (m MapRequest) GetMapTilePath() string {
+	return fmt.Sprintf("%s/%d/%f/%f/%f.png", m.Provider, m.ThemeMode, m.Z, m.X, m.Y)
 }

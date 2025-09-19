@@ -23,7 +23,7 @@ func GetMapUploadingBucket() (*storage.BucketHandle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return client.Bucket(" map-cached"), nil
+	return client.Bucket("map-cached"), nil
 }
 
 // SaveFile saves a string to a file within a specified folder.

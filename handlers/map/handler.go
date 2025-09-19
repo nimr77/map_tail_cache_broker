@@ -3,6 +3,7 @@ package map_handler
 import (
 	"log"
 	map_core "map_broker/core/map"
+	map_services "map_broker/service/map"
 	"strconv"
 	"strings"
 
@@ -55,4 +56,14 @@ func GetImageBaseOnXYZoom(c *gin.Context) {
 	mapRequest.ThemeMode = map_core.ThemeMode(themeInt)
 
 	log.Printf("Map Request: %+v\n", mapRequest)
+
+	imageBy, err := map_services.GetTail(mapRequest)
+	if err != nil {
+		log.Printf("Error getting image: %v", err.Error())
+		c.JSON(400, gin.H{"error": "Failed to get image", "massage": err.Error()})
+		return
+	}
+
+	c.Data(200, "image/png", imageBy)
+
 }

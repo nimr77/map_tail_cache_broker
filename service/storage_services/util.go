@@ -1,30 +1,12 @@
 package storage_services
 
 import (
-	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
-
-	"cloud.google.com/go/storage"
 )
-
-func GetClient() (*storage.Client, error) {
-	client, err := storage.NewClient(context.Background())
-
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
-func GetMapUploadingBucket() (*storage.BucketHandle, error) {
-	client, err := GetClient()
-	if err != nil {
-		return nil, err
-	}
-	return client.Bucket("map-cached"), nil
-}
 
 // SaveFile saves a string to a file within a specified folder.
 func SaveFile(data string, folder string, ext string, filename string) error {
@@ -57,4 +39,27 @@ func SaveFile(data string, folder string, ext string, filename string) error {
 	}
 
 	return nil
+}
+
+// DownloadFileFromUrl downloads a file from a URL and returns its content as a byte array.
+func DownloadFileFromUrl(url string) ([]byte, error) {
+	// 1. Make a GET request to the URL.
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making GET request: %w", err)
+	}
+	defer response.Body.Close()
+
+	// 2. Check if the request was successful (status code 2xx).
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return nil, fmt.Errorf("request failed with status code: %d", response.StatusCode)
+	}
+
+	// 3. Read all the bytes from the response body.
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	return data, nil
 }

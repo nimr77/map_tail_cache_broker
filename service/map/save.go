@@ -1,9 +1,18 @@
 package map_services
 
-import map_core "map_broker/core/map"
+import (
+	map_core "map_broker/core/map"
+	"map_broker/service/storage_services"
+)
 
-func SaveMapTileToService(request map_core.MapRequest) (string, error) {
-	// logic to save the map tile to the service (e.g., local storage or cloud storage)
-	// return the URL or path where the tile is saved
-	return "http://example.com/saved_tile.png", nil
+func UploadMapTileToStorageService(request map_core.MapRequest, fileBytes []byte) (string, error) {
+	path := request.GetMapTilePath()
+
+	url, err := storage_services.UploadFileBytes(fileBytes, "image/jpeg", path)
+
+	if err != nil {
+		return "", err
+	}
+
+	return url, nil
 }

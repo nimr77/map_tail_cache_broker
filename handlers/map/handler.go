@@ -4,6 +4,8 @@ import (
 	"log"
 	map_core "map_broker/core/map"
 	map_services "map_broker/service/map"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -30,27 +32,58 @@ func GetImageBaseOnXYZoomHandler(c *gin.Context) {
 
 	mapRequest := map_core.MapRequest{}
 
-	// xFloat, err := strconv.ParseFloat(x, 64)
-	// if err != nil {
-	// 	c.JSON(400, gin.H{"error": "Invalid x parameter"})
-	// 	return
-	// }
+	// Parse and validate coordinates
+	xFloat, err := strconv.ParseFloat(x, 64)
+	if err != nil {
+		log.Printf("Invalid x parameter: %s", x)
+		c.JSON(400, gin.H{"error": "Invalid x parameter"})
+		return
+	}
 
-	// yFloat, err := strconv.ParseFloat(y, 64)
-	// if err != nil {
-	// 	c.JSON(400, gin.H{"error": "Invalid y parameter"})
-	// 	return
-	// }
+	yFloat, err := strconv.ParseFloat(y, 64)
+	if err != nil {
+		log.Printf("Invalid y parameter: %s", y)
+		c.JSON(400, gin.H{"error": "Invalid y parameter"})
+		return
+	}
 
-	// zFloat, err := strconv.ParseFloat(z, 64)
-	// if err != nil {
-	// 	c.JSON(400, gin.H{"error": "Invalid z parameter"})
-	// 	return
-	// }
+	zFloat, err := strconv.ParseFloat(z, 64)
+	if err != nil {
+		log.Printf("Invalid z parameter: %s", z)
+		c.JSON(400, gin.H{"error": "Invalid z parameter"})
+		return
+	}
 
-	mapRequest.X = x
-	mapRequest.Y = y
-	mapRequest.Z = z
+	// Validate coordinate ranges
+	if zFloat < 0 || zFloat > 18 {
+		log.Printf("Invalid zoom level: %f (must be 0-18)", zFloat)
+		c.JSON(400, gin.H{"error": "Invalid zoom level (must be 0-18)"})
+		return
+	}
+
+	maxTile := math.Pow(2, zFloat)
+	if xFloat < 0 || xFloat >= maxTile {
+		log.Printf("Invalid x coordinate: %f (must be 0-%f)", xFloat, maxTile-1)
+		c.JSON(400, gin.H{"error": "Invalid x coordinate"})
+		return
+	}
+
+	if yFloat < 0 || yFloat >= maxTile {
+		log.Printf("Invalid y coordinate: %f (must be 0-%f)", yFloat, maxTile-1)
+		c.JSON(400, gin.H{"error": "Invalid y coordinate"})
+		return
+	}
+
+	// Convert XYZ coordinates to TMS coordinates for MapTiler
+	// XYZ has Y=0 at top, TMS has Y=0 at bottom
+	tmsY := maxTile - 1 - yFloat
+
+	log.Printf("Original XYZ coordinates: X=%f, Y=%f, Z=%f", xFloat, yFloat, zFloat)
+	log.Printf("Converted TMS coordinates: X=%f, Y=%f, Z=%f", xFloat, tmsY, zFloat)
+
+	mapRequest.X = strconv.FormatFloat(xFloat, 'f', -1, 64)
+	mapRequest.Y = strconv.FormatFloat(tmsY, 'f', -1, 64)
+	mapRequest.Z = strconv.FormatFloat(zFloat, 'f', -1, 64)
 	mapRequest.Provider = strings.ToLower(provider)
 	mapRequest.ThemeMode = map_core.ThemeMode(themeInt)
 

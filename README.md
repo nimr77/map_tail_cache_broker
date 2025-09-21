@@ -223,6 +223,16 @@ curl "http://localhost:8080/map/10/5/3?provider=maptiler&theme=dark" -o tile_dar
 
 This project is part of the Palestine Jaywalk initiative.
 
+---
+
+## 🇵🇸 Made with Love for Palestine
+
+This project was created with love and solidarity for Palestine. 🇵🇸
+
+*Free Palestine* - We stand with the Palestinian people in their struggle for freedom, justice, and self-determination.
+
+🇵🇸 **Palestine will be free** 🇵🇸
+
 ## 🤝 Contributing
 
 1. Fork the repository

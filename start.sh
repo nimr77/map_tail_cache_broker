@@ -21,7 +21,7 @@ fi
 # Function to run the Go application
 run_app() {
     if [[ "$ENV" == "debug" ]]; then
-           nodemon --watch '.' --ext 'go' --exec 'go run main.go --port 8081' --signal SIGTERM --verbose
+           nodemon --watch '.' --ext 'go' --exec 'go run main.go --port 8083' --signal SIGTERM --verbose
         # fswatch -o ./**/*.go | xargs -n1 -I{} go run main.go        elif [[ "$ENV" == "prod" ]]; then
             echo "Production mode not implemented yet."        exit 1
     fi

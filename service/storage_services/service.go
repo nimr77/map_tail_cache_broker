@@ -2,17 +2,28 @@ package storage_services
 
 import (
 	"context"
+	"os"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
 
 func GetClient() (*storage.Client, error) {
-	client, err := storage.NewClient(context.Background())
+	// Check if we have a service account key file
+	credentialsFile := "map-broker-jaywalk-75c83aba05cf.json"
 
-	if err != nil {
-		return nil, err
+	var client *storage.Client
+	var err error
+
+	if _, err := os.Stat(credentialsFile); err == nil {
+		// Use the service account key file
+		client, err = storage.NewClient(context.Background(), option.WithCredentialsFile(credentialsFile))
+	} else {
+		// Fall back to default credentials (for development)
+		client, err = storage.NewClient(context.Background())
 	}
-	return client, nil
+
+	return client, err
 }
 
 func GetMapUploadingBucket() (*storage.BucketHandle, error) {

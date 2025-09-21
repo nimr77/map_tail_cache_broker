@@ -7,5 +7,5 @@ import (
 )
 
 func GetRouter(r *gin.RouterGroup) {
-	r.GET("/:x/:y/:z", map_handler.GetImageBaseOnXYZoom)
+	r.GET("/:x/:y/:z", map_handler.GetImageBaseOnXYZoomHandler)
 }

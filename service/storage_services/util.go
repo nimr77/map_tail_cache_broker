@@ -3,6 +3,7 @@ package storage_services
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,6 +44,7 @@ func SaveFile(data string, folder string, ext string, filename string) error {
 
 // DownloadFileFromUrl downloads a file from a URL and returns its content as a byte array.
 func DownloadFileFromUrl(url string) ([]byte, error) {
+	log.Printf("Downloading file from URL: %s", url)
 	// 1. Make a GET request to the URL.
 	response, err := http.Get(url)
 	if err != nil {

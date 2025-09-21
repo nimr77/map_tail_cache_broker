@@ -4,13 +4,12 @@ import (
 	"log"
 	map_core "map_broker/core/map"
 	map_services "map_broker/service/map"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetImageBaseOnXYZoom(c *gin.Context) {
+func GetImageBaseOnXYZoomHandler(c *gin.Context) {
 	x := c.Param("x")
 	y := c.Param("y")
 	z := c.Param("z")
@@ -24,34 +23,34 @@ func GetImageBaseOnXYZoom(c *gin.Context) {
 
 	themeInt := 0
 	if theme == "light" {
-		themeInt = 0
-	} else {
 		themeInt = 1
+	} else {
+		themeInt = 0
 	}
 
 	mapRequest := map_core.MapRequest{}
 
-	xFloat, err := strconv.ParseFloat(x, 64)
-	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid x parameter"})
-		return
-	}
+	// xFloat, err := strconv.ParseFloat(x, 64)
+	// if err != nil {
+	// 	c.JSON(400, gin.H{"error": "Invalid x parameter"})
+	// 	return
+	// }
 
-	yFloat, err := strconv.ParseFloat(y, 64)
-	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid y parameter"})
-		return
-	}
+	// yFloat, err := strconv.ParseFloat(y, 64)
+	// if err != nil {
+	// 	c.JSON(400, gin.H{"error": "Invalid y parameter"})
+	// 	return
+	// }
 
-	zFloat, err := strconv.ParseFloat(z, 64)
-	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid z parameter"})
-		return
-	}
+	// zFloat, err := strconv.ParseFloat(z, 64)
+	// if err != nil {
+	// 	c.JSON(400, gin.H{"error": "Invalid z parameter"})
+	// 	return
+	// }
 
-	mapRequest.X = xFloat
-	mapRequest.Y = yFloat
-	mapRequest.Z = zFloat
+	mapRequest.X = x
+	mapRequest.Y = y
+	mapRequest.Z = z
 	mapRequest.Provider = strings.ToLower(provider)
 	mapRequest.ThemeMode = map_core.ThemeMode(themeInt)
 

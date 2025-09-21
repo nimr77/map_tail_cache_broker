@@ -49,8 +49,9 @@ func DownloadFile(url string) ([]byte, error) {
 	if len(bytes) == 0 {
 		return nil, errors.New("file is empty")
 	}
-
-	SaveFile(string(bytes), "downloaded_files", "jpg", "downloaded_file")
+	// if os.Getenv("env") == "debug" {
+	// 	SaveFile(string(bytes), "downloaded_files", "jpg", "downloaded_file")
+	// }
 
 	return bytes, nil
 }

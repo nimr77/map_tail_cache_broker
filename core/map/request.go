@@ -20,9 +20,9 @@ type MapRequestMeta struct {
 
 type MapRequest struct {
 	MapRequestMeta
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-	Z float64 `json:"z"`
+	X string `json:"x"`
+	Y string `json:"y"`
+	Z string `json:"z"`
 }
 
 func (m MapRequest) GetMapProvider() (MapTailsProvider, error) {
@@ -45,9 +45,15 @@ func (m MapRequest) GetFullMapTailUrl() (string, error) {
 	}
 
 	url := provider.GetMapTailsProvider().Url
-	url = strings.ReplaceAll(url, "{z}", fmt.Sprintf("%f", m.Z))
-	url = strings.ReplaceAll(url, "{x}", fmt.Sprintf("%f", m.X))
-	url = strings.ReplaceAll(url, "{y}", fmt.Sprintf("%f", m.Y))
+
+	// Check if API key is missing
+	if strings.Contains(url, "key=") && strings.HasSuffix(url, "key=") {
+		return "", errors.New("MAPTILER_API_KEY environment variable is not set")
+	}
+
+	url = strings.ReplaceAll(url, "{z}", fmt.Sprintf("%s", m.Z))
+	url = strings.ReplaceAll(url, "{x}", fmt.Sprintf("%s", m.X))
+	url = strings.ReplaceAll(url, "{y}", fmt.Sprintf("%s", m.Y))
 	return url, nil
 }
 
@@ -56,5 +62,5 @@ func (m MapRequest) GetFullMapTailUrl() (string, error) {
 // }
 
 func (m MapRequest) GetMapTilePath() string {
-	return fmt.Sprintf("%s/%d/%f/%f/%f.png", m.Provider, m.ThemeMode, m.Z, m.X, m.Y)
+	return fmt.Sprintf("%s/%d/%s/%s/%s.png", m.Provider, m.ThemeMode, m.Z, m.X, m.Y)
 }

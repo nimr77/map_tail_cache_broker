@@ -32,9 +32,15 @@ log_info "Starting deployment of map-broker-jaywalk-prod..."
 
 # Check if .env file exists
 if [ -f ".env" ]; then
-    log_info "Found .env file, will be included in deployment"
+    log_info "Found .env file, loading environment variables..."
+    # Load environment variables from .env file
+    export $(grep -v '^#' .env | xargs)
+    log_success "Environment variables loaded from .env file"
 else
     log_warning ".env file not found - deployment will proceed without environment variables"
+    log_info "To set environment variables, create a .env file with your configuration"
+    log_info "Example .env file content:"
+    log_info "MAPTILER_API_KEY=your_api_key_here"
 fi
 
 # Check if gcloud is authenticated
@@ -48,7 +54,9 @@ log_success "gcloud authentication verified"
 
 # Deploy to Google Cloud Run
 log_info "Deploying to Google Cloud Run..."
-gcloud run deploy map-broker-jaywalk-prod \
+
+# Build the gcloud command with environment variables if they exist
+GCLOUD_CMD="gcloud run deploy map-broker-jaywalk-prod \
     --project map-broker-jaywalk \
     --region us-central1 \
     --source . \
@@ -56,7 +64,18 @@ gcloud run deploy map-broker-jaywalk-prod \
     --min-instances 0 \
     --concurrency 50 \
     --platform managed \
-    --quiet
+    --quiet"
+
+# Add environment variables if MAPTILER_API_KEY is set
+if [ ! -z "$MAPTILER_API_KEY" ]; then
+    log_info "Setting MAPTILER_API_KEY environment variable for Cloud Run service"
+    GCLOUD_CMD="$GCLOUD_CMD --set-env-vars MAPTILER_API_KEY=$MAPTILER_API_KEY"
+else
+    log_warning "MAPTILER_API_KEY not set - service may not work properly"
+fi
+
+# Execute the deployment command
+eval $GCLOUD_CMD
 
 if [ $? -eq 0 ]; then
     log_success "Deployment completed successfully!"

@@ -5,7 +5,7 @@ A high-performance map tile caching and proxy service built with Go and Gin fram
 ## 🚀 Features
 
 - **Map Tile Caching**: Intelligent caching system using Google Cloud Storage
-- **Multiple Map Providers**: Support for MapTiler with light and dark themes
+- **Multiple Map Providers**: Support for various map providers (MapTiler used as example)
 - **RESTful API**: Clean REST API for map tile requests
 - **Automatic Caching**: Tiles are automatically cached on first request
 - **Theme Support**: Light and dark map themes
@@ -28,7 +28,7 @@ map_broker/
 
 ### Core Components
 
-- **Map Provider**: Handles different map tile providers (MapTiler)
+- **Map Provider**: Handles different map tile providers (configurable)
 - **Storage Service**: Abstracts Google Cloud Storage operations
 - **Map Service**: Core business logic for tile retrieval and caching
 - **Handler**: HTTP request/response handling
@@ -38,7 +38,7 @@ map_broker/
 
 - Go 1.23.0 or higher
 - Google Cloud Storage bucket (`map-cached`)
-- MapTiler API key
+- Map provider API key (MapTiler used as example)
 - Google Cloud credentials configured
 
 ## 🛠️ Installation
@@ -56,7 +56,11 @@ map_broker/
 
 3. **Set up environment variables**
    ```bash
+   # Example with MapTiler (you can use any map provider)
    export MAPTILER_API_KEY="your_maptiler_api_key"
+   
+   # Or use your preferred map provider's API key
+   # export YOUR_PROVIDER_API_KEY="your_api_key"
    ```
 
 4. **Configure Google Cloud Storage**
@@ -92,7 +96,7 @@ go build -o map_broker
 - `x` (path): Tile X coordinate
 - `y` (path): Tile Y coordinate  
 - `z` (path): Zoom level
-- `provider` (query): Map provider (`maptiler`)
+- `provider` (query): Map provider (e.g., `maptiler`, `openstreetmap`, etc.)
 - `theme` (query): Theme mode (`light` or `dark`)
 
 **Example Request**:
@@ -110,7 +114,7 @@ curl "http://localhost:8080/map/10/5/3?provider=maptiler&theme=dark"
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `MAPTILER_API_KEY` | MapTiler API key for tile requests | Yes |
+| `MAPTILER_API_KEY` | MapTiler API key for tile requests (example - you can use any map provider) | Yes* |
 
 ### Google Cloud Storage
 
@@ -122,10 +126,12 @@ The service uses Google Cloud Storage for caching tiles. Ensure you have:
 
 ### Supported Map Providers
 
-Currently supports:
-- **MapTiler**: Light and dark themes
+The service is designed to work with any map tile provider. Currently configured with:
+- **MapTiler** (example implementation): Light and dark themes
   - Light: `streets-v2`
   - Dark: `streets-v2-dark`
+
+**Note**: You can easily configure any map provider by modifying the provider configuration in `core/map/provider.go`. The service supports any tile-based map provider that follows standard tile URL patterns.
 
 ## 🏃‍♂️ How It Works
 
@@ -133,7 +139,7 @@ Currently supports:
 2. **Cache Check**: Service checks if tile exists in Google Cloud Storage
 3. **Cache Hit**: If tile exists, returns cached tile immediately
 4. **Cache Miss**: If tile doesn't exist:
-   - Downloads tile from MapTiler API
+   - Downloads tile from configured map provider API
    - Returns tile to client immediately
    - Asynchronously uploads tile to cache for future requests
 
@@ -178,9 +184,10 @@ map_broker/
 - Automatic cache population on first access
 
 ### Theme Support
-- Light theme: Standard MapTiler streets
-- Dark theme: Dark variant of MapTiler streets
+- Light theme: Standard map provider streets (MapTiler example)
+- Dark theme: Dark variant of map provider streets (MapTiler example)
 - Theme selection via query parameter
+- Easily configurable for any map provider
 
 ### Error Handling
 - Comprehensive error handling for invalid coordinates

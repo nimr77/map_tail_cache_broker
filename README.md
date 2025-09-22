@@ -86,6 +86,43 @@ go build -o map_broker
 ./map_broker --port=8080
 ```
 
+### Deploying to Cloud Services
+
+You can deploy the service to various platforms:
+
+- **Google Cloud Run**
+  - Build and push a Docker image
+  - Deploy using Cloud Run console or CLI
+- **AWS Elastic Beanstalk**
+  - Create a Dockerfile
+  - Deploy using Elastic Beanstalk CLI
+- **Azure App Service**
+  - Use Docker or Go runtime
+  - Deploy via Azure CLI or portal
+- **Other Platforms**
+  - Any service supporting Docker or Go binaries
+
+#### Example: Deploy with Docker
+```dockerfile
+FROM golang:1.23-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN go build -o map_broker
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/map_broker .
+CMD ["./map_broker", "--port=8080"]
+```
+
+Build and run:
+```bash
+docker build -t map-broker .
+docker run -p 8080:8080 map-broker
+```
+
+For cloud deployment, push your image to a registry and follow your provider's deployment steps.
+
 ## 📡 API Endpoints
 
 ### Get Map Tile
@@ -116,13 +153,28 @@ curl "http://localhost:8080/map/10/5/3?provider=maptiler&theme=dark"
 |----------|-------------|----------|
 | `MAPTILER_API_KEY` | MapTiler API key for tile requests (example - you can use any map provider) | Yes* |
 
-### Google Cloud Storage
+### Storage Provider Configuration
 
-The service uses Google Cloud Storage for caching tiles. Ensure you have:
+By default, the service uses Google Cloud Storage for caching tiles. To use another storage provider (e.g., AWS S3, Azure Blob Storage, local filesystem):
 
-1. A bucket named `map-cached`
-2. Proper authentication configured
-3. Service account with Storage Admin permissions
+1. **Implement a Storage Client**: Create a new client in `service/storage_services/` (e.g., `s3_service.go`) that implements the same interface as the Google Cloud client (`GetClient`, `GetMapUploadingBucket`, etc.).
+2. **Update Uploader/Downloader**: Modify `uploader.go` and `downloader.go` to use your new client based on configuration or environment variable (e.g., `STORAGE_PROVIDER=s3`).
+3. **Configure Credentials**: Set up credentials for your provider (e.g., AWS keys, Azure connection string) in environment variables or config files.
+4. **Test Integration**: Ensure upload/download logic works with your provider.
+
+Example for AWS S3:
+```go
+// In service/storage_services/s3_service.go
+// Implement GetClient and GetMapUploadingBucket for S3
+```
+
+Update your `.env` or environment variables:
+```bash
+export STORAGE_PROVIDER="s3"
+export AWS_ACCESS_KEY_ID="your_key"
+export AWS_SECRET_ACCESS_KEY="your_secret"
+export AWS_BUCKET_NAME="your_bucket"
+```
 
 ### Supported Map Providers
 

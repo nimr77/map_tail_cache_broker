@@ -155,26 +155,140 @@ curl "http://localhost:8080/map/10/5/3?provider=maptiler&theme=dark"
 
 ### Storage Provider Configuration
 
-By default, the service uses Google Cloud Storage for caching tiles. To use another storage provider (e.g., AWS S3, Azure Blob Storage, local filesystem):
+The Map Broker service uses a flexible storage abstraction layer located in `service/storage_services/` that currently implements Google Cloud Storage but is designed to support multiple storage providers.
 
-1. **Implement a Storage Client**: Create a new client in `service/storage_services/` (e.g., `s3_service.go`) that implements the same interface as the Google Cloud client (`GetClient`, `GetMapUploadingBucket`, etc.).
-2. **Update Uploader/Downloader**: Modify `uploader.go` and `downloader.go` to use your new client based on configuration or environment variable (e.g., `STORAGE_PROVIDER=s3`).
-3. **Configure Credentials**: Set up credentials for your provider (e.g., AWS keys, Azure connection string) in environment variables or config files.
-4. **Test Integration**: Ensure upload/download logic works with your provider.
+#### Current Implementation: Google Cloud Storage
 
-Example for AWS S3:
+**Default Configuration**:
+- **Bucket**: `map-cached` (hardcoded)
+- **Authentication**: Service account key file (`map-broker-jaywalk-75c83aba05cf.json`) or default credentials
+- **Access Control**: Supports both private and public file access
+
+**Setup Requirements**:
+1. Create a Google Cloud Storage bucket named `map-cached`
+2. Set up authentication using one of these methods:
+   - **Service Account Key**: Place `map-broker-jaywalk-75c83aba05cf.json` in project root
+   - **Default Credentials**: Use `gcloud auth application-default login`
+3. Grant appropriate permissions to the service account
+
+#### Adding Another Storage Provider
+
+The storage services component is architected to support multiple providers. Here's how to add support for additional storage providers:
+
+**Step 1: Create Provider-Specific Service**
 ```go
-// In service/storage_services/s3_service.go
-// Implement GetClient and GetMapUploadingBucket for S3
+// Create service/storage_services/aws_s3_service.go
+package storage_services
+
+import (
+    "github.com/aws/aws-sdk-go/service/s3"
+)
+
+type S3Service struct {
+    client *s3.S3
+    bucket string
+}
+
+func NewS3Service() (*S3Service, error) {
+    // Initialize AWS S3 client
+    // Return S3Service instance
+}
 ```
 
-Update your `.env` or environment variables:
+**Step 2: Implement Upload/Download Functions**
+```go
+func (s *S3Service) UploadFile(file multipart.File, fileHeader *multipart.FileHeader, path string) (string, error) {
+    // Implement S3 upload logic
+    // Return S3 URL
+}
+
+func (s *S3Service) DownloadFile(path string) ([]byte, error) {
+    // Implement S3 download logic
+    // Return file bytes
+}
+```
+
+**Step 3: Add Provider Selection Logic**
+```go
+func GetStorageProvider() string {
+    provider := os.Getenv("STORAGE_PROVIDER")
+    if provider == "" {
+        return "gcs" // Default to Google Cloud Storage
+    }
+    return provider
+}
+```
+
+**Step 4: Update Main Functions**
+```go
+func UploadFile(file multipart.File, fileHeader *multipart.FileHeader, path string) (string, error) {
+    provider := GetStorageProvider()
+    
+    switch provider {
+    case "gcs":
+        return UploadFileToGCS(file, fileHeader, path)
+    case "s3":
+        return UploadFileToS3(file, fileHeader, path)
+    case "azure":
+        return UploadFileToAzure(file, fileHeader, path)
+    default:
+        return "", fmt.Errorf("unsupported storage provider: %s", provider)
+    }
+}
+```
+
+**Step 5: Configure Environment Variables**
+
+For AWS S3:
 ```bash
 export STORAGE_PROVIDER="s3"
-export AWS_ACCESS_KEY_ID="your_key"
-export AWS_SECRET_ACCESS_KEY="your_secret"
-export AWS_BUCKET_NAME="your_bucket"
+export AWS_ACCESS_KEY_ID="your_access_key"
+export AWS_SECRET_ACCESS_KEY="your_secret_key"
+export AWS_REGION="us-east-1"
+export AWS_BUCKET_NAME="your-bucket-name"
 ```
+
+For Azure Blob Storage:
+```bash
+export STORAGE_PROVIDER="azure"
+export AZURE_STORAGE_ACCOUNT="your_account"
+export AZURE_STORAGE_KEY="your_key"
+export AZURE_CONTAINER_NAME="your-container"
+```
+
+**Step 6: Add Dependencies**
+```bash
+go get github.com/aws/aws-sdk-go
+go get github.com/Azure/azure-storage-blob-go
+```
+
+#### Supported Storage Providers
+
+| Provider | Status | Configuration | Documentation |
+|----------|--------|---------------|---------------|
+| Google Cloud Storage | ✅ Implemented | Default | [Storage Services README](service/storage_services/README.md) |
+| AWS S3 | 🔄 Extensible | `STORAGE_PROVIDER=s3` | See implementation guide above |
+| Azure Blob Storage | 🔄 Extensible | `STORAGE_PROVIDER=azure` | See implementation guide above |
+| Local Filesystem | 🔄 Extensible | `STORAGE_PROVIDER=local` | See implementation guide above |
+
+#### Storage Services Architecture
+
+The storage services component provides:
+
+- **Unified Interface**: Consistent API for all storage operations
+- **Multiple Upload Methods**: Support for multipart files and byte arrays
+- **Access Control**: Both private and public file access
+- **URL Parsing**: Automatic conversion between different URL formats
+- **Error Handling**: Comprehensive error handling and validation
+- **Extensibility**: Easy to add new storage providers
+
+**Key Files**:
+- `service.go`: Core client and bucket management
+- `uploader.go`: File upload operations (public/private)
+- `downloader.go`: File download and URL parsing
+- `util.go`: Utility functions for file operations
+
+For detailed implementation examples and complete documentation, see the [Storage Services README](service/storage_services/README.md).
 
 ### Supported Map Providers
 
@@ -187,13 +301,24 @@ The service is designed to work with any map tile provider. Currently configured
 
 ## 🏃‍♂️ How It Works
 
+### Map Tile Request Flow
+
 1. **Request Processing**: Client requests a map tile with X, Y, Z coordinates and theme
-2. **Cache Check**: Service checks if tile exists in Google Cloud Storage
-3. **Cache Hit**: If tile exists, returns cached tile immediately
+2. **Cache Check**: Service checks if tile exists in Google Cloud Storage using path `{provider}/{themeMode}/{z}/{x}/{y}.png`
+   - Theme mode: `0` = Dark, `1` = Light
+3. **Cache Hit**: If tile exists, downloads and returns cached tile immediately
 4. **Cache Miss**: If tile doesn't exist:
    - Downloads tile from configured map provider API
    - Returns tile to client immediately
    - Asynchronously uploads tile to cache for future requests
+
+### Storage Operations
+
+The service performs three main storage operations:
+
+- **Check Operation**: Verifies if a tile exists in storage using `bucket.Object(path).Attrs()`
+- **Download Operation**: Retrieves cached tiles using `storage_services.DownloadFile(path)`
+- **Upload Operation**: Caches new tiles using `storage_services.UploadFileBytes()` (asynchronous)
 
 ## 📁 File Structure
 
@@ -216,11 +341,12 @@ map_broker/
 │   ├── map/
 │   │   ├── checker.go       # Cache existence checking
 │   │   └── save.go          # Tile saving operations
-│   └── storage_services/
-│       ├── downloader.go    # File download utilities
-│       ├── service.go       # Storage service client
-│       ├── uploader.go      # File upload operations
-│       └── util.go          # Storage utility functions
+│   └── storage_services/    # Storage abstraction layer
+│       ├── downloader.go    # File download and URL parsing
+│       ├── service.go       # Core storage client and bucket management
+│       ├── uploader.go      # File upload operations (public/private)
+│       ├── util.go          # Storage utility functions
+│       └── README.md        # Comprehensive storage services documentation
 ├── go.mod                   # Go module dependencies
 ├── go.sum                   # Go module checksums
 ├── main.go                  # Application entry point
@@ -231,7 +357,8 @@ map_broker/
 ## 🔍 Key Features Explained
 
 ### Intelligent Caching
-- Tiles are cached using a structured path: `{provider}/{theme}/{z}/{x}/{y}.png`
+- Tiles are cached using a structured path: `{provider}/{themeMode}/{z}/{x}/{y}.png`
+- Theme mode values: `0` = Dark theme, `1` = Light theme
 - Cache-first approach for optimal performance
 - Automatic cache population on first access
 
